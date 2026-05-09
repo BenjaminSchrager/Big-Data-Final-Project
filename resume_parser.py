@@ -9,22 +9,34 @@ except ModuleNotFoundError:
     )
 
 
-COMMON_SECTION_HEADERS = [
-    "EDUCATION",
-    "PROFESSIONAL EXPERIENCE",
-    "EXPERIENCE",
-    "WORK EXPERIENCE",
-    "SKILLS",
-    "TECHNICAL SKILLS",
-    "PROJECTS",
-    "ACTIVITIES",
-    "LEADERSHIP",
-]
+SECTION_ALIASES = {
+    "EDUCATION": "EDUCATION",
+
+    "PROFESSIONAL EXPERIENCE": "EXPERIENCE",
+    "WORK EXPERIENCE": "EXPERIENCE",
+    "EXPERIENCE": "EXPERIENCE",
+    "RELEVANT EXPERIENCE": "EXPERIENCE",
+    "EMPLOYMENT HISTORY": "EXPERIENCE",
+
+    "SKILLS": "SKILLS",
+    "TECHNICAL SKILLS": "SKILLS",
+    "HARD SKILLS": "SKILLS",
+    "SOFT SKILLS": "SKILLS",
+
+    "PROJECTS": "PROJECTS",
+    "ACTIVITIES": "ACTIVITIES",
+    "LEADERSHIP": "LEADERSHIP",
+    "LEADERSHIP EXPERIENCE": "LEADERSHIP",
+    "PROFILE": "PROFILE",
+    "SUMMARY": "PROFILE",
+    "LANGUAGES": "LANGUAGES",
+}
 
 
 def extract_text_from_pdf(pdf_path: str) -> str:
     """
     Extract all text from a text-based PDF resume.
+    Returns raw text as a string.
     """
     pdf_file = Path(pdf_path)
 
@@ -54,9 +66,25 @@ def clean_resume_text(text: str) -> str:
     return text.strip()
 
 
+def normalize_section_header(line: str) -> str:
+    """
+    Normalize a candidate section header so matching is case-insensitive
+    and whitespace/punctuation noise is reduced.
+    """
+    normalized = line.strip().upper()
+    normalized = re.sub(r"\s+", " ", normalized)
+    normalized = normalized.rstrip(":")
+    return normalized
+
+
 def split_resume_sections(text: str) -> dict[str, str]:
     """
-    Split resume text into sections using common all-caps section headers.
+    Split resume text into normalized sections using common section aliases.
+
+    Example:
+    - 'Education' -> 'EDUCATION'
+    - 'Employment History' -> 'EXPERIENCE'
+    - 'Technical Skills' -> 'SKILLS'
     """
     lines = [line.strip() for line in text.split("\n") if line.strip()]
 
@@ -64,25 +92,36 @@ def split_resume_sections(text: str) -> dict[str, str]:
     current_section = "HEADER"
 
     for line in lines:
-        if line in COMMON_SECTION_HEADERS:
-            current_section = line
+        normalized = normalize_section_header(line)
+
+        if normalized in SECTION_ALIASES:
+            current_section = SECTION_ALIASES[normalized]
             if current_section not in sections:
                 sections[current_section] = []
         else:
             sections[current_section].append(line)
 
-    return {section: "\n".join(content).strip() for section, content in sections.items()}
+    result = {
+        section: "\n".join(content).strip()
+        for section, content in sections.items()
+    }
+    result["FULL_TEXT"] = text
+    return result
 
 
 if __name__ == "__main__":
     sample_path = "sample_resume.pdf"
+
     try:
         extracted = extract_text_from_pdf(sample_path)
-        print(extracted[:3000])
+        print("=== FIRST 2000 CHARACTERS ===")
+        print(extracted[:2000])
 
-        print("\n=== SECTIONS ===")
+        print("\n=== DETECTED SECTIONS ===")
         sections = split_resume_sections(extracted)
         for name, content in sections.items():
+            if name == "FULL_TEXT":
+                continue
             print(f"\n--- {name} ---")
             print(content[:500])
 

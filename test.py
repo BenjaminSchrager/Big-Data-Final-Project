@@ -3,7 +3,7 @@ from pathlib import Path
 from predict_resume import predict_from_resume, print_prediction_report
 
 
-RESUME_PATH = "test_resumes/example1.png"
+RESUME_PATH = "test_resumes/BenSchragerResume.pdf"
 MODEL_PATH = "resume_reviewer_model.joblib"
 
 

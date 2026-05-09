@@ -84,58 +84,123 @@ def extract_computer_skills(sections: dict[str, str]):
     return len(found_skills), found_skills
 
 
+def estimate_years_code_pro(sections: dict[str, str]):CURRENT_YEAR = datetime.now().year
+
+MONTHS = {
+
+    "january": 1, "jan": 1,
+
+    "february": 2, "feb": 2,
+
+    "march": 3, "mar": 3,
+
+    "april": 4, "apr": 4,
+
+    "may": 5,
+
+    "june": 6, "jun": 6,
+
+    "july": 7, "jul": 7,
+
+    "august": 8, "aug": 8,
+
+    "september": 9, "sep": 9, "sept": 9,
+
+    "october": 10, "oct": 10,
+
+    "november": 11, "nov": 11,
+
+    "december": 12, "dec": 12,
+
+}
+
+def month_str_to_num(month_str: str):
+
+    return MONTHS.get(month_str.lower())
+
 def estimate_years_code_pro(sections: dict[str, str]):
     """
-    Roughly estimate YearsCodePro from experience section year mentions.
-
-    Assumptions:
-    - 'Summer YYYY' counts as about 0.25 years
-    - a listed standalone year counts as about 0.25 years if it appears in a repeated summer pattern
-    - a range like 2018 - 2022 counts as full-year span
+    Estimate YearsCodePro from experience date patterns.
+    Handles:
+    - Summer YYYY
+    - repeated year lists like 2021, 2022, 2023
+    - year ranges like 2018 - 2022
+    - month-year ranges like June 2024 - August 2024
     """
     exp_text = "\n".join([
-        sections.get("PROFESSIONAL EXPERIENCE", ""),
         sections.get("EXPERIENCE", ""),
+        sections.get("PROFESSIONAL EXPERIENCE", ""),
         sections.get("WORK EXPERIENCE", ""),
+        sections.get("FULL_TEXT", ""),
     ])
-
     if not exp_text.strip():
         return None, {"method": "no_experience_section", "details": []}
-
     details = []
     total_years = 0.0
 
-    # Count "Summer YYYY"
+    # 1. Summer YYYY
     summer_years = re.findall(r"\bSummer\s+(20\d{2})\b", exp_text, flags=re.IGNORECASE)
-    for year in set(summer_years):
+    for year in sorted(set(summer_years)):
         total_years += 0.25
         details.append(f"Summer {year} -> 0.25")
 
-    # Count explicit repeated standalone years in lists like "2021, 2022, 2023"
+    # 2. Repeated year lists like 2021, 2022, 2023
     repeated_year_lists = re.findall(r"(20\d{2}(?:,\s*20\d{2})+)", exp_text)
+
     for block in repeated_year_lists:
         years = re.findall(r"20\d{2}", block)
-        for year in set(years):
+        for year in sorted(set(years)):
             if year not in summer_years:
                 total_years += 0.25
                 details.append(f"Listed year {year} -> 0.25")
 
-    # Count ranges like 2018 - 2022
-    ranges = re.findall(r"\b(20\d{2})\s*[–-]\s*(20\d{2}|Present)\b", exp_text, flags=re.IGNORECASE)
-    for start, end in ranges:
+    # 3. Plain year ranges like 2018 - 2022 or 2021 - Present
+    year_ranges = re.findall(r"\b(20\d{2})\s*[–-]\s*(20\d{2}|Present)\b", exp_text, flags=re.IGNORECASE)
+
+    for start, end in year_ranges:
         start_year = int(start)
         end_year = CURRENT_YEAR if end.lower() == "present" else int(end)
         span = max(0, end_year - start_year)
-        total_years += span
-        details.append(f"Range {start}-{end} -> {span}")
+        if span > 0:
+            total_years += span
+            details.append(f"Range {start}-{end} -> {span}")
+
+    # 4. Month-year ranges like June 2024 - August 2024
+    month_pattern = (
+        r"\b("
+        r"January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|"
+        r"August|Aug|September|Sep|Sept|October|Oct|November|Nov|December|Dec"
+        r")\s+(20\d{2})\s*[–-]\s*("
+        r"January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|"
+        r"August|Aug|September|Sep|Sept|October|Oct|November|Nov|December|Dec|Present"
+        r")\s*(20\d{2})?\b"
+    )
+    month_ranges = re.findall(month_pattern, exp_text, flags=re.IGNORECASE)
+
+    for start_month, start_year, end_month, end_year in month_ranges:
+        start_month_num = month_str_to_num(start_month)
+        start_year_num = int(start_year)
+        if end_month.lower() == "present":
+            end_month_num = datetime.now().month
+            end_year_num = CURRENT_YEAR
+        else:
+            end_month_num = month_str_to_num(end_month)
+            end_year_num = int(end_year) if end_year else start_year_num
+        if start_month_num and end_month_num:
+            months = (end_year_num - start_year_num) * 12 + (end_month_num - start_month_num)
+            years = max(0, round(months / 12, 2))
+            if years > 0:
+                total_years += years
+                details.append(
+                    f"{start_month} {start_year_num} - {end_month} {end_year_num} -> {years}"
+                )
 
     total_years = round(total_years, 2)
 
     if total_years == 0:
         return None, {"method": "no_clear_professional_duration_found", "details": details}
-
+    
     return total_years, {"method": "rule_based_experience_estimate", "details": details}
-
 
 def estimate_years_code(sections: dict[str, str]):
 
