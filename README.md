@@ -61,35 +61,6 @@ This project analyzes software engineering applicant data to predict hiring outc
 - pdfplumber (PDF text extraction)
 - jupyter, notebook (for running notebooks)
 
-## Installation
-
-### 1. Clone or Navigate to the Project Directory
-
-```bash
-cd /path/to/Big-Data-Final-Project
-```
-
-### 2. Create a Virtual Environment (Recommended)
-
-```bash
-# Create virtual environment
-python3 -m venv venv
-
-# Activate virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-venv\Scripts\activate
-```
-
-### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-This will install all required packages including Jupyter notebook support.
-
 ## Usage
 
 ### Running the Main Analysis Notebook
@@ -116,8 +87,6 @@ OR
 # Start Jupyter Lab (alternative interface)
 jupyter lab main_notebook.ipynb
 ```
-
-Your browser should open automatically. If not, copy the URL from the terminal (usually `http://localhost:8888/...`).
 
 **In the Jupyter interface:**
 1. Click on `Cell` → `Run All` to execute all cells
@@ -244,43 +213,8 @@ If SHAP plots don't render:
 pip install shap --upgrade
 ```
 
-## Model Performance
-
-### Logistic Regression (Recommended Model)
-- **Accuracy**: ~0.74
-- **F1 Score**: ~0.80
-- **ROC-AUC**: ~0.80
-
-### Feature Importance (Top 5)
-1. YearsCodePro (Professional coding years)
-2. YearsCode (Total coding years)
-3. PreviousSalary
-4. EdLevel (Education level)
-5. MainBranch (Professional developer status)
-
-## Ethical Considerations
-
-This project demonstrates the importance of fairness in hiring algorithms:
-
-- Adding demographic features (gender, age) introduces bias without improving accuracy
-- The baseline model (without sensitive attributes) is recommended for deployment
-- This tool should be used as **decision support**, not automated screening
-- Human review and judgment remain essential in hiring decisions
-
 ## Citation
 
 Data Source: StackOverflow Developer Survey
 Contributors: Code & Read-Me Generation Assisted with Anthropic Claude
 
-## License
-
-This project is for educational purposes as part of a Big Data course final project.
-
-## Contact
-
-- Owen Lee
-- Ben Schrager
-
----
-
-**Last Updated:** May 2025
