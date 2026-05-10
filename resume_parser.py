@@ -11,18 +11,15 @@ except ModuleNotFoundError:
 
 SECTION_ALIASES = {
     "EDUCATION": "EDUCATION",
-
     "PROFESSIONAL EXPERIENCE": "EXPERIENCE",
     "WORK EXPERIENCE": "EXPERIENCE",
     "EXPERIENCE": "EXPERIENCE",
     "RELEVANT EXPERIENCE": "EXPERIENCE",
     "EMPLOYMENT HISTORY": "EXPERIENCE",
-
     "SKILLS": "SKILLS",
     "TECHNICAL SKILLS": "SKILLS",
     "HARD SKILLS": "SKILLS",
     "SOFT SKILLS": "SKILLS",
-
     "PROJECTS": "PROJECTS",
     "ACTIVITIES": "ACTIVITIES",
     "LEADERSHIP": "LEADERSHIP",
@@ -30,14 +27,34 @@ SECTION_ALIASES = {
     "PROFILE": "PROFILE",
     "SUMMARY": "PROFILE",
     "LANGUAGES": "LANGUAGES",
+    "CAREER OBJECTIVE": "PROFILE",
+    "CONTACT": "HEADER",
 }
 
+INLINE_SECTION_HEADERS = [
+    "PROFESSIONAL EXPERIENCE",
+    "WORK EXPERIENCE",
+    "RELEVANT EXPERIENCE",
+    "EMPLOYMENT HISTORY",
+    "TECHNICAL SKILLS",
+    "LEADERSHIP EXPERIENCE",
+    "CAREER OBJECTIVE",
+    "EDUCATION",
+    "EXPERIENCE",
+    "SKILLS",
+    "PROJECTS",
+    "ACTIVITIES",
+    "LEADERSHIP",
+    "PROFILE",
+    "SUMMARY",
+    "LANGUAGES",
+    "CONTACT",
+]
+
+
+# Text extraction
 
 def extract_text_from_pdf(pdf_path: str) -> str:
-    """
-    Extract all text from a text-based PDF resume.
-    Returns raw text as a string.
-    """
     pdf_file = Path(pdf_path)
 
     if not pdf_file.exists():
@@ -55,47 +72,55 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     return clean_resume_text(text)
 
 
+def isolate_inline_headers(text: str) -> str:
+    for header in sorted(INLINE_SECTION_HEADERS, key=len, reverse=True):
+        pattern = rf"\s+({re.escape(header)})\s+"
+        text = re.sub(pattern, rf"\n\1\n", text, flags=re.IGNORECASE)
+    return text
+
+
 def clean_resume_text(text: str) -> str:
-    """
-    Clean extracted resume text by normalizing whitespace.
-    """
     text = text.replace("\xa0", " ")
     text = re.sub(r"\r", "\n", text)
+    text = isolate_inline_headers(text)
     text = re.sub(r"\n{2,}", "\n\n", text)
     text = re.sub(r"[ \t]+", " ", text)
     return text.strip()
 
 
+# Section parsing
+
 def normalize_section_header(line: str) -> str:
-    """
-    Normalize a candidate section header so matching is case-insensitive
-    and whitespace/punctuation noise is reduced.
-    """
     normalized = line.strip().upper()
     normalized = re.sub(r"\s+", " ", normalized)
     normalized = normalized.rstrip(":")
     return normalized
 
 
-def split_resume_sections(text: str) -> dict[str, str]:
-    """
-    Split resume text into normalized sections using common section aliases.
+def get_section_name(line: str) -> str | None:
+    normalized = normalize_section_header(line)
 
-    Example:
-    - 'Education' -> 'EDUCATION'
-    - 'Employment History' -> 'EXPERIENCE'
-    - 'Technical Skills' -> 'SKILLS'
-    """
+    if normalized in SECTION_ALIASES:
+        return SECTION_ALIASES[normalized]
+
+    for header, section_name in SECTION_ALIASES.items():
+        if normalized.startswith(header):
+            return section_name
+
+    return None
+
+
+def split_resume_sections(text: str) -> dict[str, str]:
     lines = [line.strip() for line in text.split("\n") if line.strip()]
 
     sections: dict[str, list[str]] = {"HEADER": []}
     current_section = "HEADER"
 
     for line in lines:
-        normalized = normalize_section_header(line)
+        section_name = get_section_name(line)
 
-        if normalized in SECTION_ALIASES:
-            current_section = SECTION_ALIASES[normalized]
+        if section_name is not None:
+            current_section = section_name
             if current_section not in sections:
                 sections[current_section] = []
         else:
@@ -109,21 +134,28 @@ def split_resume_sections(text: str) -> dict[str, str]:
     return result
 
 
-if __name__ == "__main__":
+# Local test
+
+def main() -> None:
     sample_path = "sample_resume.pdf"
 
     try:
-        extracted = extract_text_from_pdf(sample_path)
-        print("=== FIRST 2000 CHARACTERS ===")
-        print(extracted[:2000])
+        text = extract_text_from_pdf(sample_path)
 
-        print("\n=== DETECTED SECTIONS ===")
-        sections = split_resume_sections(extracted)
+        print("Preview")
+        print(text[:2000])
+
+        print("\nSections")
+        sections = split_resume_sections(text)
         for name, content in sections.items():
             if name == "FULL_TEXT":
                 continue
-            print(f"\n--- {name} ---")
-            print(content[:500])
+            print(f"\n{name}")
+            print(content[:400])
 
     except Exception as e:
         print(f"Error: {e}")
+
+
+if __name__ == "__main__":
+    main()

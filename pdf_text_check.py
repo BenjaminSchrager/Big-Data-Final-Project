@@ -1,12 +1,19 @@
 from pathlib import Path
 import sys
+import pdfplumber
 
-try:
-    import pdfplumber
-except ModuleNotFoundError:
-    raise ModuleNotFoundError(
-        "pdfplumber is not installed. Run: python -m pip install pdfplumber"
-    )
+
+
+SECTION_KEYWORDS = [
+    "education",
+    "experience",
+    "work experience",
+    "relevant experience",
+    "employment history",
+    "skills",
+    "technical skills",
+    "projects",
+]
 
 
 def extract_pdf_text(pdf_path: str) -> str:
@@ -18,7 +25,7 @@ def extract_pdf_text(pdf_path: str) -> str:
     all_text = []
 
     with pdfplumber.open(pdf_file) as pdf:
-        for i, page in enumerate(pdf.pages, start=1):
+        for page in pdf.pages:
             page_text = page.extract_text()
             if page_text:
                 all_text.append(page_text)
@@ -26,41 +33,40 @@ def extract_pdf_text(pdf_path: str) -> str:
     return "\n".join(all_text).strip()
 
 
-def check_pdf_text(pdf_path: str):
+def print_section_check(text: str) -> None:
+    text_lower = text.lower()
+
+    print("\nSection keywords")
+    for keyword in SECTION_KEYWORDS:
+        print(f"- {keyword}: {keyword in text_lower}")
+
+
+def check_pdf_text(pdf_path: str) -> None:
     text = extract_pdf_text(pdf_path)
 
     print(f"PDF: {pdf_path}")
-    print(f"Extracted text length: {len(text)}")
+    print(f"Text length: {len(text)}")
 
     if len(text) == 0:
-        print("\nRESULT: No readable/extractable text found.")
-        print("This PDF is likely image-based, scanned, or uses a layout that pdfplumber cannot parse well.")
+        print("\nResult: no readable text found")
+        print("This file is likely image-based, scanned, or difficult for pdfplumber to parse.")
         return
 
-    print("\nRESULT: Readable/extractable text found.")
-
-    print("\n=== FIRST 2000 CHARACTERS ===")
+    print("\nResult: readable text found")
+    print("\nPreview")
     print(text[:2000])
 
-    section_keywords = [
-        "education",
-        "experience",
-        "work experience",
-        "relevant experience",
-        "skills",
-        "technical skills",
-        "projects",
-    ]
-
-    print("\n=== SECTION KEYWORD CHECK ===")
-    for keyword in section_keywords:
-        print(f"{keyword}: {keyword in text.lower()}")
+    print_section_check(text)
 
 
-if __name__ == "__main__":
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python pdf_text_check.py <path_to_pdf>")
         sys.exit(1)
 
     pdf_path = sys.argv[1]
     check_pdf_text(pdf_path)
+
+
+if __name__ == "__main__":
+    main()
