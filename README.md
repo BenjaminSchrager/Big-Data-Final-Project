@@ -270,6 +270,7 @@ This project demonstrates the importance of fairness in hiring algorithms:
 ## Citation
 
 Data Source: StackOverflow Developer Survey
+Contributors: Code & Read-Me Generation Assisted with Anthropic Claude
 
 ## License
 
